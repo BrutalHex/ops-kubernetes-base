@@ -1,0 +1,27 @@
+name: 'Configure AWS'
+description: 'Configures AWS credentials for use in GitHub Actions and eks acccess'
+inputs:
+  aws-role-to-assume:
+    description: 'AWS role to assume'
+    required: true
+  aws-region:
+    description: 'AWS Region'
+    required: true
+  app-name:
+    description: 'Name of the application'
+    required: true
+runs:
+  using: 'composite'
+  steps:
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        role-to-assume: ${{ inputs.aws-role-to-assume }}
+        aws-region: ${{ inputs.aws-region }}
+
+    - name: setup kube config
+      shell: bash
+      run: |
+        set -e
+        aws eks --region ${{ inputs.aws-region }} update-kubeconfig --name ${{ inputs.app-name }}
+      continue-on-error: false

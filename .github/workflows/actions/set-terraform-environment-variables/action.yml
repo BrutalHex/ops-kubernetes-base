@@ -1,0 +1,37 @@
+name: 'Set Terraform Environment Variables'
+description: 'Sets Terraform environment variables for use in GitHub Actions'
+inputs:
+  app-environment:
+    description: 'The environment to deploy the application to'
+    required: true
+  app-name:
+    description: 'The name of the application'
+    required: true
+  argocd-apps-repository:
+    description: 'The repository containing the ArgoCD applications'
+    required: true
+  cert-email:
+    description: 'The email address to use for the certificate'
+    required: true
+  eks-cluster-secret-id:  
+    description: 'The aws secret ID that holds information about of EKS cluster'
+    required: true
+  aws-region: 
+    description: 'The aws region'
+    required: true
+  argocd-admin-password:
+    description: 'The password for the ArgoCD admin user'
+    required: true
+runs:
+  using: 'composite'
+  steps:
+    - name: Set Terraform Environment Variables
+      run: |
+        echo "TF_VAR_APP_ENVIRONMENT=${{ inputs.app-environment }}" >> $GITHUB_ENV
+        echo "TF_VAR_APP_NAME=${{ inputs.app-name }}" >> $GITHUB_ENV
+        echo "TF_VAR_CERT_EMAIL=${{ inputs.cert-email }}" >> $GITHUB_ENV
+        echo "TF_VAR_ARGOCD_APPS_REPOSITORY=${{ inputs.argocd-apps-repository }}" >> $GITHUB_ENV
+        echo "TF_VAR_EKS_CLUSTER_SECRET_ID=${{ inputs.eks-cluster-secret-id }}" >> $GITHUB_ENV
+        echo "TF_VAR_AWS_REGION=${{ inputs.aws-region }}" >> $GITHUB_ENV
+        echo "TF_VAR_ARGOCD_ADMIN_PASSWORD=${{ inputs.argocd-admin-password }}" >> $GITHUB_ENV
+      shell: bash

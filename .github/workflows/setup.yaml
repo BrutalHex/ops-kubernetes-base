@@ -1,0 +1,89 @@
+# this workflow apllies the changes against AWS and Cluster.
+---
+name: setup
+on:
+  workflow_call:
+    secrets:
+      AWS_ROLE_TO_ASSUME:
+        required: true
+      ARGOCD_ADMIN_PASSWORD:
+        required: true
+  workflow_dispatch: {}
+jobs:
+  generate-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Generate matrix
+        id: set-matrix
+        run: |
+          # Convert REGIONS from comma-separated to JSON array
+          REGIONS=$(echo '${{ vars.REGIONS }}' | sed 's/,/","/g')
+          echo "matrix=[\"${REGIONS}\"]" >> $GITHUB_OUTPUT
+  deploy:
+    needs: generate-matrix
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    strategy:
+      matrix:
+        region: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Configure AWS
+        uses: ./.github/workflows/actions/aws-eks-setup
+        with:
+          aws-role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ matrix.region }}
+          app-name: ${{vars.APP_NAME}}
+
+      - name: Set Terraform Environment Variables
+        uses: ./.github/workflows/actions/set-terraform-environment-variables
+        with:
+          app-environment: ${{vars.APP_ENVIRONMENT}}
+          app-name: ${{vars.APP_NAME}}
+          argocd-apps-repository: ${{vars.ARGOCD_APPS_REPOSITORY}}
+          argocd-admin-password: ${{secrets.ARGOCD_ADMIN_PASSWORD}}
+          cert-email: ${{vars.CERT_EMAIL}}
+          eks-cluster-secret-id: ${{vars.EKS_CLUSTER_SECRET_ID}}
+          aws-region: ${{ matrix.region }}
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: v1.32.0
+
+      - name: Apply Cert-Manager CRDs
+        run: |
+          kubectl apply -f https://github.com/cert-manager/cert-manager/releases/latest/download/cert-manager.crds.yaml
+        continue-on-error: false
+        
+      - name: Apply ArgoCD CRDs
+        run: |
+          set -e
+          kubectl apply -f https://raw.githubusercontent.com/bitnami/charts/refs/heads/main/bitnami/argo-cd/crds/application.yaml
+          kubectl apply -f https://raw.githubusercontent.com/bitnami/charts/refs/heads/main/bitnami/argo-cd/crds/applicationset.yaml
+          kubectl apply -f https://raw.githubusercontent.com/bitnami/charts/refs/heads/main/bitnami/argo-cd/crds/project.yaml
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: '1.8.2'
+      - name: validate the changes
+        run: |
+          set -e
+          make check
+        continue-on-error: false
+      - name: plan chnages
+        run: |
+          set -e
+          make plan
+        continue-on-error: false
+      - name: apply chnages
+        run: |
+          set -e
+          make apply
+        continue-on-error: false
