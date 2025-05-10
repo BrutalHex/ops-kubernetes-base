@@ -26,7 +26,7 @@ resource "helm_release" "external-dns" {
 
   set {
     name  = "sources"
-    value = "{ingress}"
+    value = "{gateway-httproute}"
   }
 
   set {

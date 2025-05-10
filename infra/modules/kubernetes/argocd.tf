@@ -1,21 +1,22 @@
 locals {
-  argocd_namespace = "argocd"
+
+  argocd_domain = "argocd.${var.DOMAIN}"
 }
 
 resource "helm_release" "argocd" {
-  depends_on       = [helm_release.aws_load_balancer_controller, kubernetes_namespace.namespace, helm_release.ingress-nginx]
-  name             = local.argocd_namespace
+  depends_on       = [helm_release.aws_load_balancer_controller, kubernetes_namespace.namespace]
+  name             = var.ARGOCD_NAMESPACE
   repository       = "https://argoproj.github.io/argo-helm"
   chart            = "argo-cd"
   version          = "7.8.2"
-  namespace        = local.argocd_namespace
+  namespace        = var.ARGOCD_NAMESPACE
   create_namespace = false
   values = [yamlencode({
     crds = {
       install = false
     }
     global = {
-      domain = "argocd.${var.DOMAIN}"
+      domain = local.argocd_domain
     }
     configs = {
       secret = {
@@ -31,14 +32,9 @@ resource "helm_release" "argocd" {
         "server.insecure" = true
       }
       ingress = {
-        extraTls         = {}
-        tls              = false
-        enabled          = true
-        ingressClassName = "nginx"
-        annotations = {
-          "nginx.ingress.kubernetes.io/force-ssl-redirect" = "true"
-          "nginx.ingress.kubernetes.io/ssl-passthrough"    = "false"
-        }
+        extraTls = {}
+        tls      = false
+        enabled  = false
       }
       insecure    = true
       disableAuth = true
@@ -99,7 +95,7 @@ resource "kubernetes_manifest" "argocd_applicationset" {
     kind       = "ApplicationSet"
     metadata = {
       name      = "ops-argocd-apps"
-      namespace = "argocd"
+      namespace = var.ARGOCD_NAMESPACE
     }
     spec = {
       goTemplate        = true
@@ -125,14 +121,15 @@ resource "kubernetes_manifest" "argocd_applicationset" {
           project = "default"
           destination = {
             server    = "https://kubernetes.default.svc"
-            namespace = "argocd"
+            namespace = "{{ .spec.destination.namespace }}"
           }
           source = {
             chart          = "{{ .spec.source.chart }}"
             repoURL        = "{{ .spec.source.repoURL }}"
             targetRevision = "{{ .spec.source.targetRevision }}"
             helm = {
-              values = "{{ .spec.source.helm.valuesObject | toYaml | nindent 12}}"
+              releaseName = "{{ .spec.source.helm.releaseName }}"
+              values      = "{{ .spec.source.helm.valuesObject | toYaml | nindent 12}}"
             }
           }
           syncPolicy = {
@@ -143,6 +140,38 @@ resource "kubernetes_manifest" "argocd_applicationset" {
           }
         }
       }
+    }
+  }
+}
+
+resource "kubernetes_manifest" "argocd_http_route" {
+  manifest = {
+    apiVersion = "gateway.networking.k8s.io/v1"
+    kind       = "HTTPRoute"
+    metadata = {
+      name      = "argocd-route"
+      namespace = var.ARGOCD_NAMESPACE
+    }
+    spec = {
+      parentRefs = [
+        {
+          name      = var.GATEWAY_NAME
+          namespace = var.GATEWAY_NAMESPACE
+        }
+      ]
+      hostnames = [
+        local.argocd_domain
+      ]
+      rules = [
+        {
+          backendRefs = [
+            {
+              name = "${var.ARGOCD_NAMESPACE}-server"
+              port = 80
+            }
+          ]
+        }
+      ]
     }
   }
 }

@@ -1,3 +1,4 @@
+
 resource "helm_release" "cert-manager" {
   depends_on = [helm_release.aws_ebs_csi_driver, helm_release.external-dns, kubernetes_namespace.namespace, helm_release.aws_load_balancer_controller]
   name       = "cert-manager"
@@ -67,6 +68,33 @@ resource "kubernetes_manifest" "cert_wildcard" {
       dnsNames = [
         "*.${var.DOMAIN}",
         "${var.DOMAIN}"
+      ]
+    }
+  }
+}
+
+resource "kubernetes_manifest" "reference_grant" {
+  manifest = {
+    apiVersion = "gateway.networking.k8s.io/v1beta1"
+    kind       = "ReferenceGrant"
+    metadata = {
+      name      = "allow-gateway-secret"
+      namespace = var.SERVICE_ACCOUNT_NAME_CERT_MANAGER_NAMESPACE
+    }
+    spec = {
+      from = [
+        {
+          group     = "gateway.networking.k8s.io"
+          kind      = "Gateway"
+          namespace = "istio-system"
+        }
+      ]
+      to = [
+        {
+          group = ""
+          kind  = "Secret"
+          name  = "${var.DOMAIN}-tls" # Specific Secret
+        }
       ]
     }
   }

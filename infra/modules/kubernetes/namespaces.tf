@@ -2,9 +2,9 @@
 
 locals {
   namespaces = [
-    var.NAMESPACES_NGINX,
     var.SERVICE_ACCOUNT_NAME_CERT_MANAGER_NAMESPACE,
-    local.argocd_namespace,
+    var.ARGOCD_NAMESPACE,
+    var.KEYCLOAK_NAMESPACE
   ]
 }
 
@@ -19,7 +19,9 @@ resource "kubernetes_namespace" "namespace" {
   metadata {
     name = each.value
     labels = {
-      "${var.APP_NAME}" = "true"
+      "${var.APP_NAME}"         = "true"
+      "istio.io/dataplane-mode" = "ambient"
+      "istio.io/use-waypoint"   = "waypoint"
     }
   }
 }

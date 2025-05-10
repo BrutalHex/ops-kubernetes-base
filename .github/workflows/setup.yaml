@@ -56,6 +56,11 @@ jobs:
         with:
           version: v1.32.0
 
+      - name: Apply gateway CRDs
+        run: |
+          kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.3.0/standard-install.yaml
+        continue-on-error: false
+
       - name: Apply Cert-Manager CRDs
         run: |
           kubectl apply -f https://github.com/cert-manager/cert-manager/releases/latest/download/cert-manager.crds.yaml

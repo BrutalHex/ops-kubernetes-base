@@ -5,25 +5,6 @@ resource "helm_release" "aws_ebs_csi_driver" {
   namespace  = kubernetes_service_account.csi-driver-kube-system.metadata.0.namespace
   depends_on = [kubernetes_service_account.csi-driver-kube-system]
   set {
-    name  = "controller.enableVolumeScheduling"
-    value = "true"
-  }
-
-  set {
-    name  = "controller.enableVolumeResizing"
-    value = "true"
-  }
-
-  set {
-    name  = "controller.enableVolumeSnapshot"
-    value = "true"
-  }
-
-  set {
-    name  = "controller.serviceAccount.autoMountServiceAccountToken"
-    value = "true"
-  }
-  set {
     name  = "controller.serviceAccount.name"
     value = kubernetes_service_account.csi-driver-kube-system.metadata.0.name
   }
@@ -32,7 +13,7 @@ resource "helm_release" "aws_ebs_csi_driver" {
     value = "false"
   }
   set {
-    name  = "replicaCount"
+    name  = "controller.replicaCount"
     value = "1"
   }
 }

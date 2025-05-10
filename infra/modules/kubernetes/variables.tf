@@ -1,7 +1,3 @@
-variable "NAMESPACES_NGINX" {
-  description = "The Kubernetes namespace where the NGINX ingress controller will be deployed."
-  default     = "nginx-system"
-}
 
 variable "VPC_ID" {
   description = "The ID of the VPC where the EKS cluster is deployed."
@@ -60,7 +56,7 @@ variable "AWS_IAM_ROLE_LOAD_BALANCER_ARN" {
 }
 
 variable "LOAD_BALANCER_SERVICE_ACCOUNT" {
-  description = "The name of the Kubernetes service account used for managing nginx Load Balancer"
+  description = "The name of the Kubernetes service account used for managing Load Balancer"
 }
 
 variable "ARGOCD_APPS_REPOSITORY" {
@@ -72,4 +68,21 @@ variable "ARGOCD_ADMIN_PASSWORD" {
   description = "The initial password for the ArgoCD admin user"
   type        = string
   sensitive   = true
+}
+variable "KEYCLOAK_NAMESPACE" {
+  description = "The keyclaok namespace"
+  type        = string
+}
+variable "GATEWAY_NAME" {
+  description = "The name of the gateway"
+  type        = string
+}
+variable "GATEWAY_NAMESPACE" {
+  description = "The namespace of the gateway"
+  type        = string
+}
+
+variable "ARGOCD_NAMESPACE" {
+  description = "The argocd namespace"
+  type        = string
 }
